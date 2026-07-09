@@ -1,11 +1,12 @@
-import { GoogleGenAI } from '@google/genai';
-import * as z from 'zod';
-import { toolDeclarations } from './tools';
-import type { PlanStep } from './types';
+import { GoogleGenAI } from "@google/genai";
+import * as z from "zod";
+import { toolDeclarations } from "./tools";
+import type { PlanStep } from "./types";
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GOOGLE_API_KEY!,
-});
+const apiKey = process.env.GOOGLE_API_KEY;
+if (!apiKey) throw new Error("Missing GOOGLE_API_KEY environment variable");
+
+const ai = new GoogleGenAI({ apiKey });
 
 const planOutputSchema = z.object({
   steps: z.array(
@@ -47,33 +48,37 @@ const planJsonSchema = {
 
 export async function createPlan(goal: string): Promise<PlanStep[]> {
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
+    model: "gemini-2.5-flash",
     contents: `Break this goal into 3-6 concrete steps. Goal: "${goal}".
 Each step must use one of: web_search, content, write_file, public_api_call.`,
     config: {
-      responseMimeType: 'application/json',
+      responseMimeType: "application/json",
       responseSchema: planJsonSchema,
     },
   });
 
-  const parsed: PlanOutput = planOutputSchema.parse(JSON.parse(response.text!));
-  return parsed.steps.map((s) => ({ ...s, status: 'pending' as const }));
+  const text = response.text;
+  if (!text) throw new Error("Plan creation failed: empty response from Gemini");
+
+  const parsed: PlanOutput = planOutputSchema.parse(JSON.parse(text));
+  return parsed.steps.map((s) => ({ ...s, status: "pending" as const }));
 }
 
 export async function askGeminiForStep(
   stepDescription: string,
+  toolName: string,
   contextSummary: string,
 ) {
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: `Context so far: ${contextSummary}\n\nCurrent step: ${stepDescription}\n\nExplain your reasoning in 1-2 sentences before acting.`,
+    model: "gemini-2.5-flash",
+    contents: `Context so far: ${contextSummary}\n\nCurrent step: ${stepDescription}\n\nIntended tool: ${toolName}\n\nExplain your reasoning in 1-2 sentences before calling the tool.`,
     config: {
-      tools: [{ functionDeclarations: toolDeclarations }],
+      tools: [{ functionDeclarations: toolDeclarations as any }],
     },
   });
 
   return {
-    reasoningText: response.text ?? '',
+    reasoningText: response.text ?? "",
     functionCall: response.functionCalls?.[0] ?? null,
   };
 }

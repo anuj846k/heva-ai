@@ -1,0 +1,20 @@
+This summary compares the top 3 AI note-taking applications based on currently available information.
+
+**1. ClickUp**
+*   **General Characteristic:** Best for turning meeting notes into tasks.
+*   **Detailed Features (AI Notetaker):**
+    *   Availability and limits vary by plan and user role.
+    *   Currently in early access; pricing may change.
+    *   Requires activation of the AI Notetaker ClickApp.
+    *   Includes standard and advanced features (specifics not detailed in current information).
+    *   Access is determined by plan and user role.
+
+**2. Notion**
+*   **General Characteristic:** Best for AI-assisted organization.
+*   **Detailed Features:** *Detailed information regarding specific features, pricing, pros, and cons is not yet available.*
+
+**3. Obsidian**
+*   **General Characteristic:** Best for linking notes with AI.
+*   **Detailed Features:** *Detailed information regarding specific features, pricing, pros, and cons is not yet available.*
+
+**Note:** Further detailed research is required for Notion and Obsidian to provide a comprehensive comparison of features, pricing, pros, and cons.

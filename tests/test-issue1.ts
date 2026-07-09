@@ -29,12 +29,13 @@ async function main() {
     // 2a. Ask Gemini what to do
     const { reasoningText, functionCall } = await askGeminiForStep(
       step.description,
+      step.toolName,
       contextSummary || 'No previous steps completed yet.',
     );
     console.log(`🧠 Reasoning: ${reasoningText}`);
 
-    if (!functionCall) {
-      console.log(`⚠️  No function call returned, skipping.`);
+    if (!functionCall || !functionCall.name || !functionCall.args) {
+      console.log(`⚠️  Invalid function call returned, skipping.`);
       continue;
     }
 
@@ -42,7 +43,7 @@ async function main() {
     console.log(
       `🔧 Calling: ${functionCall.name}(${JSON.stringify(functionCall.args)})`,
     );
-    const result = await runTool(functionCall.name!, functionCall.args!);
+    const result = await runTool(functionCall.name, functionCall.args);
 
     if (result.ok) {
       console.log(`✅ Tool succeeded`);

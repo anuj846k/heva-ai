@@ -1,5 +1,10 @@
-import { z } from 'zod';
-import { Type, FunctionDeclaration } from '@google/genai';
+import { z } from "zod";
+import { Type } from "@google/genai";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
+
+const exaApiKey = process.env.EXA_API_KEY!;
+if (!exaApiKey) throw new Error("Missing EXA_API_KEY environment variable");
 
 const webSearchSchema = z.object({ query: z.string() });
 const fetchUrlSchema = z.object({ url: z.url() });
@@ -13,7 +18,7 @@ const publicApiSchema = z.object({
   body: z.record(z.string(), z.unknown()).optional(),
 });
 
-export const toolDeclarations: FunctionDeclaration[] = [
+export const toolDeclarations = [
   {
     name: 'web_search',
     description: 'Search the web for information relevant to the goal',
@@ -87,7 +92,7 @@ export async function runTool(name: string, rawInput: unknown) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': process.env.EXA_API_KEY!,
+            'x-api-key': exaApiKey,
           },
           body: JSON.stringify({
             query,
@@ -95,9 +100,14 @@ export async function runTool(name: string, rawInput: unknown) {
             numResults: 5,
             contents: { highlights: true },
           }),
+          signal: AbortSignal.timeout(30000),
         });
         if (!res.ok) throw new Error(`Search failed: ${res.status}`);
-        return { ok: true as const, data: await res.json() };
+        const data = await res.json();
+        return {
+          ok: true as const,
+          data: { results: data.results ?? [], query: data.query },
+        };
       }
       case 'content': {
         const { url } = fetchUrlSchema.parse(rawInput);
@@ -105,12 +115,13 @@ export async function runTool(name: string, rawInput: unknown) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': process.env.EXA_API_KEY!,
+            'x-api-key': exaApiKey,
           },
           body: JSON.stringify({
             urls: [url],
-            text: { maxCharacters: 20000 },
+            text: { maxCharacters: 20000, verbosity: "compact" },
           }),
+          signal: AbortSignal.timeout(30000),
         });
         if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
         const data = await res.json();
@@ -119,13 +130,11 @@ export async function runTool(name: string, rawInput: unknown) {
       }
       case 'write_file': {
         const { filename, content } = writeFileSchema.parse(rawInput);
-        const fs = await import('fs/promises');
-        const path = await import('path');
         const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
         const dir = './output';
-        await fs.mkdir(dir, { recursive: true });
+        await mkdir(dir, { recursive: true });
         const fullPath = path.join(dir, safeName);
-        await fs.writeFile(fullPath, content, 'utf-8');
+        await writeFile(fullPath, content, 'utf-8');
         return {
           ok: true as const,
           data: { path: fullPath, bytesWritten: content.length },
@@ -137,6 +146,7 @@ export async function runTool(name: string, rawInput: unknown) {
           method,
           headers: { 'Content-Type': 'application/json' },
           body: method === 'POST' && body ? JSON.stringify(body) : undefined,
+          signal: AbortSignal.timeout(30000),
         });
         if (!res.ok) throw new Error(`API call failed: ${res.status}`);
         return { ok: true as const, data: await res.json() };
