@@ -84,15 +84,20 @@ export async function askGeminiForStep(
   stepDescription: string,
   toolName: string,
   contextSummary: string,
+  plannedInput?: Record<string, unknown>,
 ) {
+  const inputHint = plannedInput
+    ? `\n\nPlanned input hint: ${JSON.stringify(plannedInput)}`
+    : '';
+
   const response = await ai.models.generateContent({
     model: 'gemini-3.5-flash',
-    contents: `Context so far: ${contextSummary}\n\nCurrent step: ${stepDescription}\n\nIntended tool: ${toolName}`,
+    contents: `Context so far: ${contextSummary}\n\nCurrent step: ${stepDescription}\n\nIntended tool: ${toolName}${inputHint}`,
     config: {
       tools: [{ functionDeclarations: toolDeclarations as any }],
       toolConfig: {
         functionCallingConfig: {
-          mode: FunctionCallingConfigMode.ANY,
+          mode: FunctionCallingConfigMode.VALIDATED,
           allowedFunctionNames: [toolName],
         },
       },
