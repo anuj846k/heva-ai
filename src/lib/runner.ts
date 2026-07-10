@@ -1,10 +1,10 @@
-import { eq, and } from "drizzle-orm";
-import { db } from "@/db/drizzle";
-import { runs, checkpoints } from "@/db/schema";
-import { emitEvent } from "./events";
-import { createPlan, askGeminiForStep, generateFinalOutput } from "./gemini";
-import { runTool } from "./tools";
-import type { PlanStep, RunStatus } from "./types";
+import { eq, and } from 'drizzle-orm';
+import { db } from '@/db/drizzle';
+import { runs, checkpoints } from '@/db/schema';
+import { emitEvent } from './events';
+import { createPlan, askGeminiForStep, generateFinalOutput } from './gemini';
+import { runTool } from './tools';
+import type { PlanStep, RunStatus } from './types';
 
 async function getRun(runId: string) {
   const rows = await db.select().from(runs).where(eq(runs.id, runId)).limit(1);
@@ -14,7 +14,7 @@ async function getRun(runId: string) {
 async function updateStatus(runId: string, status: RunStatus) {
   await db.update(runs).set({ status }).where(eq(runs.id, runId));
   await emitEvent({
-    type: "run_status",
+    type: 'run_status',
     runId,
     status,
     at: new Date().toISOString(),
@@ -33,7 +33,7 @@ async function saveCheckpoint(
   });
   await db
     .update(runs)
-    .set({ currentStepIndex: stepIndex })
+    .set({ currentStepIndex: stepIndex + 1 })
     .where(eq(runs.id, runId));
 }
 
@@ -82,14 +82,17 @@ export async function resumeAgent(runId: string) {
 
   const startIndex =
     (run.rollbackToStepIndex as number) ?? run.currentStepIndex;
-  let contextSummary = '';
+  let contextSummary = "";
 
-  if (run.rollbackToStepIndex != null && run.rollbackToStepIndex > 0) {
-    const checkpoint = await loadCheckpoint(runId, run.rollbackToStepIndex - 1);
+  if (startIndex > 0) {
+    const checkpoint = await loadCheckpoint(runId, startIndex - 1);
     if (checkpoint) {
       const state = checkpoint.state as { contextSummary: string };
       contextSummary = state.contextSummary;
     }
+  }
+
+  if (run.rollbackToStepIndex != null) {
     await db
       .update(runs)
       .set({ rollbackToStepIndex: null })
@@ -97,11 +100,11 @@ export async function resumeAgent(runId: string) {
   }
 
   await emitEvent({
-    type: 'run_resumed',
+    type: "run_resumed",
     runId,
     at: new Date().toISOString(),
   });
-  await updateStatus(runId, 'running');
+  await updateStatus(runId, "running");
   await executeFrom(runId, startIndex, contextSummary);
 }
 
@@ -204,29 +207,30 @@ async function executeFrom(
 
   try {
     const finalOutput = await generateFinalOutput(
-      (run.goal as string) || "",
+      (run.goal as string) || '',
       contextSummary,
     );
 
     await db.update(runs).set({ finalOutput }).where(eq(runs.id, runId));
 
     await emitEvent({
-      type: "final_output",
+      type: 'final_output',
       runId,
       content: finalOutput,
       at: new Date().toISOString(),
     });
 
-    await updateStatus(runId, "completed");
+    await updateStatus(runId, 'completed');
   } catch (err) {
     await emitEvent({
-      type: "tool_error",
+      type: 'tool_error',
       runId,
-      stepId: "final",
-      tool: "summarizer",
-      error: err instanceof Error ? err.message : "Final summary generation failed",
+      stepId: 'final',
+      tool: 'summarizer',
+      error:
+        err instanceof Error ? err.message : 'Final summary generation failed',
       at: new Date().toISOString(),
     });
-    await updateStatus(runId, "failed");
+    await updateStatus(runId, 'failed');
   }
 }
