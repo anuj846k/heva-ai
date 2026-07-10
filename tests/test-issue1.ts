@@ -31,6 +31,7 @@ async function main() {
       step.description,
       step.toolName,
       contextSummary || 'No previous steps completed yet.',
+      step.input as Record<string, unknown> | undefined,
     );
     console.log(`🧠 Reasoning: ${reasoningText}`);
 
