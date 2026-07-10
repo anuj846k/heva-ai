@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { createPlan, askGeminiForStep } from "../src/lib/gemini";
+import { createPlan, askGeminiForStep, generateFinalOutput } from "../src/lib/gemini";
 import { runTool } from "../src/lib/tools";
 
 const GOAL = 'Research top 3 AI note-taking apps and write a summary to file';
@@ -58,9 +58,10 @@ async function main() {
   }
 
   // 3. Final output
-  console.log(`\n${'='.repeat(60)}`);
-  console.log('\n📄 FINAL OUTPUT:\n');
-  console.log(contextSummary || '(no output)');
+  console.log(`\n${"=".repeat(60)}`);
+  console.log("\n📄 GENERATING FINAL SUMMARY...\n");
+  const finalOutput = await generateFinalOutput(GOAL, contextSummary);
+  console.log(finalOutput);
 }
 
 main().catch(console.error);
