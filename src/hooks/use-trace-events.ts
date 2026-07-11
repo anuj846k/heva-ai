@@ -75,12 +75,15 @@ export function useTraceEvents(runId: string) {
               break;
             case 'run_status':
               setStatus(evt.status);
+              window.dispatchEvent(new CustomEvent('heva-run-status', { detail: { runId, status: evt.status } }));
               break;
             case 'run_paused':
               setStatus('paused');
+              window.dispatchEvent(new CustomEvent('heva-run-status', { detail: { runId, status: 'paused' } }));
               break;
             case 'run_resumed':
               setStatus('running');
+              window.dispatchEvent(new CustomEvent('heva-run-status', { detail: { runId, status: 'running' } }));
               break;
             case 'final_output':
               setFinalOutput(evt.content);

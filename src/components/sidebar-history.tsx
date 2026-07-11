@@ -2,26 +2,10 @@ import { db } from "@/db/drizzle";
 import { runs } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SquarePenIcon } from "lucide-react";
-
-const statusBadge = (status: string) => {
-  const variants: Record<
-    string,
-    { variant: "default" | "secondary" | "destructive" | "outline"; label: string }
-  > = {
-    queued: { variant: "outline", label: "Queued" },
-    planning: { variant: "outline", label: "Planning" },
-    running: { variant: "default", label: "Running" },
-    paused: { variant: "secondary", label: "Paused" },
-    completed: { variant: "default", label: "Completed" },
-    failed: { variant: "destructive", label: "Failed" },
-  };
-  const v = variants[status] ?? { variant: "outline" as const, label: status };
-  return <Badge variant={v.variant}>{v.label}</Badge>;
-};
+import { SidebarItem } from "@/components/sidebar-item";
 
 export async function SidebarHistory() {
   const all = await db
@@ -52,23 +36,13 @@ export async function SidebarHistory() {
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-0.5">
           {all.map((run) => (
-            <Link
+            <SidebarItem
               key={run.id}
-              href={`/runs/${run.id}`}
-              className={cn(
-                "flex items-start gap-1.5 rounded-md px-2.5 py-2 text-sm transition-colors hover:bg-muted group",
-              )}
-            >
-              <div className="flex-1 min-w-0">
-                <p className="truncate text-xs leading-tight">{run.goal}</p>
-                <p className="text-muted-foreground text-[10px]">
-                  {new Date(run.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
-                {statusBadge(run.status)}
-              </div>
-            </Link>
+              id={run.id}
+              goal={run.goal}
+              createdAt={run.createdAt.toISOString()}
+              initialStatus={run.status}
+            />
           ))}
         </div>
       </ScrollArea>
