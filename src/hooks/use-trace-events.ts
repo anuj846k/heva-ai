@@ -177,11 +177,20 @@ export function useTraceEvents(runId: string) {
       listeners.push([type, handler]);
     }
 
+    const handleLocalStatusChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ runId: string; status: string }>;
+      if (customEvent.detail && customEvent.detail.runId === runId.trim()) {
+        setStatus(customEvent.detail.status);
+      }
+    };
+    window.addEventListener('heva-run-status', handleLocalStatusChange);
+
     return () => {
       for (const [type, handler] of listeners) {
         es.removeEventListener(type, handler);
       }
       es.close();
+      window.removeEventListener('heva-run-status', handleLocalStatusChange);
     };
   }, [runId]);
 
