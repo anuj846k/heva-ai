@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { subscribeToRun, getPastEvents } from "@/lib/events";
+import { NextRequest } from 'next/server';
+import { subscribeToRun, getPastEvents } from '@/lib/events';
 
 export async function GET(
   req: NextRequest,
@@ -12,9 +12,7 @@ export async function GET(
       const encoder = new TextEncoder();
       const send = (event: string, data: unknown) => {
         controller.enqueue(encoder.encode(`event: ${event}\n`));
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify(data)}\n\n`),
-        );
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
 
       const past = await getPastEvents(runId);
@@ -29,10 +27,10 @@ export async function GET(
       const unsubscribe = subscribeToRun(runId, (evt) => send(evt.type, evt));
 
       const keepAlive = setInterval(() => {
-        controller.enqueue(encoder.encode(": ping\n\n"));
+        controller.enqueue(encoder.encode(': ping\n\n'));
       }, 15000);
 
-      req.signal.addEventListener("abort", () => {
+      req.signal.addEventListener('abort', () => {
         clearInterval(keepAlive);
         unsubscribe();
         controller.close();
@@ -42,10 +40,10 @@ export async function GET(
 
   return new Response(stream, {
     headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
     },
   });
 }
