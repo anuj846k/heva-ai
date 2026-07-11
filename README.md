@@ -54,3 +54,20 @@ pnpm install
 pnpm dev
 ```
 Open [http://localhost:3000](http://localhost:3000) to view the live dashboard.
+
+---
+
+## 🧪 Recommended Test Cases
+
+You can test the full capabilities of the agent (reasoning, tool streaming, dynamic maps, resizable artifact panel, pausing, plan editing, and rollback) using these recommended inputs:
+
+1. **Interactive Maps & Document Artifacts (Recommended)**
+   * **Prompt**: `"Find coordinates of the Eiffel Tower, show it on Google Maps, and create an HTML artifact profile."`
+   * **What to observe**: The agent streams its plan, runs the Exa search, renders a live interactive Google Map card, and automatically slides open the resizable panel showing a rich styled HTML page using Leaflet.js maps.
+2. **Search Tables & Content Scraping**
+   * **Prompt**: `"Search for the latest AI news of this week and summarize the findings in a markdown table."`
+   * **What to observe**: The agent searches the live web, parses content layout details, and generates a structured final markdown output.
+3. **CSV Formatting**
+   * **Prompt**: `"Find the coordinates of the Colosseum in Rome, plot it on a map, and compile a CSV fact table."`
+   * **What to observe**: Displays the Colosseum coordinate map card and creates a formatted CSV data table inside the side artifact panel.
+
