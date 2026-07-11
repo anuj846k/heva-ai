@@ -101,12 +101,9 @@ export default function RunPage({
     <div className="flex flex-row h-full overflow-hidden">
       <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
         <div className="border-b shrink-0 bg-background">
-          <div className="flex items-center justify-between gap-4 p-3 min-w-0">
+          <div className="flex items-center justify-between gap-2 p-3 min-w-0 flex-wrap">
             {plan.length > 0 && (
-              <div className="flex items-center gap-3 min-w-0 max-w-[70%]">
-                <span className="text-sm font-semibold text-foreground truncate shrink-0 max-w-[250px]">
-                  {goal || "Task"}
-                </span>
+              <div className="flex items-center gap-2 min-w-0 flex-wrap">
                 <span className="text-xs text-muted-foreground bg-muted/60 px-2 py-0.5 rounded font-medium truncate">
                   {status === "completed" && "Task Completed"}
                   {status === "paused" && `Paused at step ${completedCount + 1}`}
