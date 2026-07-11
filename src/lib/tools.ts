@@ -1,21 +1,19 @@
 import { z } from "zod";
 import { Type } from "@google/genai";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 
-const exaApiKey = process.env.EXA_API_KEY!;
-if (!exaApiKey) throw new Error("Missing EXA_API_KEY environment variable");
 
 const webSearchSchema = z.object({ query: z.string() });
 const fetchUrlSchema = z.object({ url: z.url() });
-const writeFileSchema = z.object({
-  filename: z.string(),
+const createDocumentSchema = z.object({
+  docType: z.enum(['markdown', 'html', 'json', 'csv']),
+  title: z.string(),
   content: z.string(),
 });
-const publicApiSchema = z.object({
-  endpoint: z.url(),
-  method: z.enum(['GET', 'POST']).optional().default('GET'),
-  body: z.record(z.string(), z.unknown()).optional(),
+const showMapSchema = z.object({
+  query: z.string(),
+  mode: z.enum(['place', 'directions', 'search']).optional().default('place'),
+  origin: z.string().optional(),
+  destination: z.string().optional(),
 });
 
 export const toolDeclarations = [
@@ -42,51 +40,65 @@ export const toolDeclarations = [
     },
   },
   {
-    name: 'write_file',
-    description: 'Write text content to a named file for later retrieval',
+    name: 'create_document',
+    description:
+      'Create a structured artifact document for the user. Use markdown for reports and text, html for interactive pages or visualizations, json for structured data, csv for tabular data.',
     parameters: {
       type: Type.OBJECT,
       properties: {
-        filename: {
+        docType: {
           type: Type.STRING,
-          description: 'Name of the file, e.g. notes.md',
+          description: 'Document type: markdown, html, json, or csv',
+        },
+        title: {
+          type: Type.STRING,
+          description: 'Human-readable title for the document',
         },
         content: {
           type: Type.STRING,
-          description: 'The text content to write',
+          description: 'Full content of the document',
         },
       },
-      required: ['filename', 'content'],
+      required: ['docType', 'title', 'content'],
     },
   },
   {
-    name: 'public_api_call',
-    description: 'Make an HTTP request to a public API and return JSON data',
+    name: 'show_map',
+    description: 'Render an interactive Google Map for locations, searches, or directions. Mode can be: place (single location), search (finding matching places near a query), or directions (route between origin and destination).',
     parameters: {
       type: Type.OBJECT,
       properties: {
-        endpoint: {
+        query: {
           type: Type.STRING,
-          description: 'Full URL of the API endpoint',
+          description: 'Address, business name, or query to highlight on the map. Required for place and search modes.',
         },
-        method: {
+        mode: {
           type: Type.STRING,
-          description: 'HTTP method: GET or POST',
+          description: 'Map view mode: place, search, or directions',
         },
-        body: {
-          type: Type.OBJECT,
-          description: 'JSON body for POST requests',
+        origin: {
+          type: Type.STRING,
+          description: 'Starting location for directions mode',
+        },
+        destination: {
+          type: Type.STRING,
+          description: 'End location for directions mode',
         },
       },
-      required: ['endpoint'],
+      required: ['query'],
     },
   },
 ];
+
+export const toolNames = toolDeclarations.map((t) => t.name) as [string, ...string[]];
+export type ToolName = typeof toolNames[number];
 
 export async function runTool(name: string, rawInput: unknown) {
   try {
     switch (name) {
       case 'web_search': {
+        const exaApiKey = process.env.EXA_API_KEY;
+        if (!exaApiKey) throw new Error("Missing EXA_API_KEY environment variable");
         const { query } = webSearchSchema.parse(rawInput);
         const res = await fetch('https://api.exa.ai/search', {
           method: 'POST',
@@ -110,6 +122,8 @@ export async function runTool(name: string, rawInput: unknown) {
         };
       }
       case 'content': {
+        const exaApiKey = process.env.EXA_API_KEY;
+        if (!exaApiKey) throw new Error("Missing EXA_API_KEY environment variable");
         const { url } = fetchUrlSchema.parse(rawInput);
         const res = await fetch('https://api.exa.ai/contents', {
           method: 'POST',
@@ -128,28 +142,19 @@ export async function runTool(name: string, rawInput: unknown) {
         const text = data.results?.[0]?.text || '';
         return { ok: true as const, data: { text: text.slice(0, 5000) } };
       }
-      case 'write_file': {
-        const { filename, content } = writeFileSchema.parse(rawInput);
-        const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const dir = './output';
-        await mkdir(dir, { recursive: true });
-        const fullPath = path.join(dir, safeName);
-        await writeFile(fullPath, content, 'utf-8');
+      case 'create_document': {
+        const { docType, title, content } = createDocumentSchema.parse(rawInput);
         return {
           ok: true as const,
-          data: { path: fullPath, bytesWritten: content.length },
+          data: { docType, title, content, created: true },
         };
       }
-      case 'public_api_call': {
-        const { endpoint, method, body } = publicApiSchema.parse(rawInput);
-        const res = await fetch(endpoint, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: method === 'POST' && body ? JSON.stringify(body) : undefined,
-          signal: AbortSignal.timeout(30000),
-        });
-        if (!res.ok) throw new Error(`API call failed: ${res.status}`);
-        return { ok: true as const, data: await res.json() };
+      case 'show_map': {
+        const parsed = showMapSchema.parse(rawInput);
+        return {
+          ok: true as const,
+          data: { ...parsed, rendered: true },
+        };
       }
       default:
         return { ok: false as const, error: `Unknown tool: ${name}` };
@@ -161,3 +166,15 @@ export async function runTool(name: string, rawInput: unknown) {
     };
   }
 }
+
+export function formatToolName(name: string): string {
+  const mapping: Record<string, string> = {
+    web_search: 'Search',
+    content: 'Read Webpage',
+    create_document: 'Create Document',
+    show_map: 'Google Map',
+  };
+  return mapping[name] ?? name;
+}
+
+

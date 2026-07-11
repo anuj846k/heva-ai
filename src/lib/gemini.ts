@@ -4,7 +4,7 @@ import {
   ThinkingLevel,
 } from '@google/genai';
 import * as z from 'zod';
-import { toolDeclarations } from './tools';
+import { toolDeclarations, toolNames } from './tools';
 import type { PlanStep } from './types';
 
 const apiKey = process.env.GOOGLE_API_KEY;
@@ -17,12 +17,7 @@ const planOutputSchema = z.object({
     z.object({
       id: z.string(),
       description: z.string(),
-      toolName: z.enum([
-        'web_search',
-        'content',
-        'write_file',
-        'public_api_call',
-      ]),
+      toolName: z.enum(toolNames),
       input: z.record(z.string(), z.unknown()),
     }),
   ),
@@ -54,7 +49,7 @@ export async function createPlan(goal: string): Promise<PlanStep[]> {
   const response = await ai.models.generateContent({
     model: 'gemini-3.5-flash',
     contents: `Break this goal into 3-6 concrete steps. Goal: "${goal}".
-Each step must use one of: web_search, content, write_file, public_api_call.`,
+Each step must use one of: ${toolNames.join(', ')}.`,
     config: {
       responseMimeType: 'application/json',
       responseSchema: planJsonSchema,

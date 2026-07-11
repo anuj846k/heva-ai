@@ -60,7 +60,6 @@ export async function startAgent(runId: string, goal: string) {
       plan,
       at: new Date().toISOString(),
     });
-
     await updateStatus(runId, 'running');
     await executeFrom(runId, 0, '');
   } catch (err) {
