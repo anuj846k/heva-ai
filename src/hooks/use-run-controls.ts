@@ -4,12 +4,10 @@ import { useCallback } from "react";
 
 export function useRunControls(runId: string) {
   const pause = useCallback(async () => {
-    window.dispatchEvent(new CustomEvent('heva-run-status', { detail: { runId, status: 'paused' } }));
     await fetch(`/api/runs/${runId}/pause`, { method: "POST" });
   }, [runId]);
 
   const resume = useCallback(async () => {
-    window.dispatchEvent(new CustomEvent('heva-run-status', { detail: { runId, status: 'running' } }));
     await fetch(`/api/runs/${runId}/resume`, { method: "POST" });
   }, [runId]);
 
